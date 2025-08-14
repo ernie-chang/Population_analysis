@@ -8,10 +8,17 @@ def get_regions_and_files(charts_dir: str):
     if not os.path.isdir(charts_dir):
         return [], []
     files = [f for f in os.listdir(charts_dir) if f.endswith('_attendance.png')]
-    regions = sorted(list({f.split('_')[0] for f in files}))
-    for extra in ['國中大區', '青年大區']:
-        if extra not in regions:
-            regions.append(extra)
+    detected = {f.split('_')[0] for f in files}
+
+    # Always include extras
+    detected.update({'國中大區', '青年大區'})
+
+    regions = sorted(list(detected))
+
+    # Move '總計' to the front if present; otherwise keep order
+    if '總計' in regions:
+        regions = ['總計'] + [r for r in regions if r != '總計']
+
     return regions, files
 
 
@@ -55,7 +62,6 @@ def build_subdistrict_cards(charts_dir: str, region: str, subdistricts: list):
 def index():
     charts_dir = os.path.join(app.static_folder, 'charts')
     regions, _ = get_regions_and_files(charts_dir)
-    # Prefer '總計' as default region if present
     requested_region = request.args.get('region', '').strip()
     if requested_region:
         region = requested_region
@@ -65,7 +71,6 @@ def index():
     subdistricts = find_subdistricts_for_region(charts_dir, region)
     subdistrict_cards = build_subdistrict_cards(charts_dir, region, subdistricts)
 
-    # Always show region-level charts on main page
     attendance_chart = f'charts/{region}_attendance.png'
     burden_chart = f'charts/{region}_burden.png'
 
