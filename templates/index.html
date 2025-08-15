@@ -89,6 +89,64 @@
         </div>
       </div>
     </div>
+    <!-- Rate Display Section -->
+    <div class="row justify-content-center mt-3 g-4">
+      <div class="col-lg-10">
+        <div class="card p-4">
+          <div class="d-flex justify-content-center align-items-center gap-3 mb-4 flex-wrap">
+            <label for="base_number_input" class="form-label mb-0 h5">基數:</label>
+            <input type="number" class="form-control form-control-lg text-center" id="base_number_input" value="{{ base_number }}" min="1" style="max-width: 150px;">
+            <button class="btn btn-primary" id="calculate-rates-btn">
+              <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+              <span class="button-text">計算比率</span>
+            </button>
+          </div>
+          <div id="rate-display" class="row gy-4">
+            <!-- Sabbath Growth Rate -->
+            <div class="col-12 text-center">
+              <h5 class="text-muted mb-3">主日繁增率 <small class="fw-normal">(相對於基準人數)</small></h5>
+              <div class="row">
+                <div class="col-6 border-end">
+                  <h6>最新一週</h6>
+                  <p id="sabbath-growth-rate" class="fs-2 fw-bold" style="color: #c0392b;">--%</p>
+                  <small class="text-muted">人數: <span id="sabbath-latest-count">--</span></small>
+                </div>
+                <div class="col-6">
+                  <h6>所有週平均</h6>
+                  <p id="avg-sabbath-growth-rate" class="fs-2 fw-bold" style="color: #c0392b;">--%</p>
+                  <small class="text-muted">平均: <span id="sabbath-avg-count">--</span></small>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Core Activities Participation Rate -->
+            <div class="col-12 text-center">
+              <h5 class="text-muted mb-3">到會參與率 <small class="fw-normal">(佔基準人數)</small></h5>
+              <div class="row gy-3">
+                {% for key, name, color in [('小排', '小排', '#f39c12'), ('晨興', '晨興', '#27ae60'), ('禱告', '禱告', '#2980b9')] %}
+                <div class="col-md-6 col-lg-4">
+                  <h6>{{ name }}</h6>
+                  <div class="d-flex justify-content-center align-items-baseline gap-3">
+                    <div>
+                      <p id="latest-{{ key }}-rate" class="fs-4 fw-bold mb-0" style="color: {{ color }};">--%</p>
+                      <small class="text-muted">最新: <span id="latest-{{ key }}-count">--</span></small>
+                    </div>
+                    <div>
+                      <p id="avg-{{ key }}-rate" class="fs-4 fw-bold mb-0" style="color: {{ color }}; opacity: 0.7;">--%</p>
+                      <small class="text-muted">平均: <span id="avg-{{ key }}-count">--</span></small>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Upload -->
     <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
       <div class="modal-dialog">
@@ -219,6 +277,84 @@
 
     // Reset button if modal is closed manually during an upload
     uploadModalEl.addEventListener('hidden.bs.modal', resetButton);
+
+    // --- Rate Calculation via API ---
+    document.addEventListener('DOMContentLoaded', function() {
+      const calculateBtn = document.getElementById('calculate-rates-btn');
+      if (!calculateBtn) return;
+
+      const baseNumberInput = document.getElementById('base_number_input');
+      const regionSelect = document.getElementById('region');
+      const alertContainer = document.getElementById('alert-container');
+
+      const btnSpinner = calculateBtn.querySelector('.spinner-border');
+      const btnText = calculateBtn.querySelector('.button-text');
+
+      async function updateRates() {
+        const baseNumber = baseNumberInput.value;
+        const region = regionSelect.value;
+
+        calculateBtn.disabled = true;
+        btnSpinner.classList.remove('d-none');
+        btnText.textContent = '計算中...';
+
+        try {
+          const response = await fetch(`/calculate_rates?base_number=${baseNumber}&region=${region}`);
+          const data = await response.json();
+
+          if (response.ok) {
+            const rates = data.rates;
+            const setText = (id, value, isRate = false) => {
+              const el = document.getElementById(id);
+              if (el) {
+                if (isFinite(value)) {
+                  el.textContent = isRate ? `${value.toFixed(1)}%` : value.toFixed(1);
+                } else {
+                  el.textContent = isRate ? '--%' : '--';
+                }
+              }
+            };
+
+            // Update Sabbath
+            const sabbathData = rates['主日'] || {};
+            setText('sabbath-latest-count', sabbathData.latest_count || 0);
+            setText('sabbath-avg-count', sabbathData.avg_count || 0);
+            setText('sabbath-growth-rate', sabbathData.latest_rate, true);
+            setText('avg-sabbath-growth-rate', sabbathData.avg_rate, true);
+
+            // Update other metrics
+            for (const key of ['小排', '晨興', '禱告']) {
+              const metricData = rates[key] || {};
+              setText(`latest-${key}-count`, metricData.latest_count || 0);
+              setText(`avg-${key}-count`, metricData.avg_count || 0);
+              setText(`latest-${key}-rate`, metricData.latest_rate, true);
+              setText(`avg-${key}-rate`, metricData.avg_rate, true);
+            }
+          } else {
+            alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">${data.message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+          }
+        } catch (error) {
+          console.error('Rate calculation error:', error);
+          alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">計算比率時發生網路錯誤。<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+        } finally {
+          calculateBtn.disabled = false;
+          btnSpinner.classList.add('d-none');
+          btnText.textContent = '計算比率';
+        }
+      }
+
+      calculateBtn.addEventListener('click', updateRates);
+
+      baseNumberInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          updateRates();
+        }
+      });
+
+      // Initial calculation on page load
+      updateRates();
+    });
   </script>
 </body>
 </html>

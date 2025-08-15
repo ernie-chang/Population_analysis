@@ -8,6 +8,7 @@ app = Flask(__name__)
 # --- Configuration ---
 # Folder to store uploaded report files
 UPLOAD_FOLDER = 'date'
+DATA_CACHE_PATH = os.path.join(UPLOAD_FOLDER, 'aggregated_data.pkl')
 # Secret key for flashing messages (important for security)
 app.config['SECRET_KEY'] = 'your_super_secret_key_change_me'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -92,6 +93,13 @@ def run_analysis():
         # 1. Aggregate data from all .xls* files
         df_reports = analysis.aggregate_reports(reports_dir)
 
+        # Save aggregated data to cache for rate calculations
+        if not df_reports.empty:
+            df_reports.to_pickle(DATA_CACHE_PATH)
+        elif os.path.exists(DATA_CACHE_PATH):
+            # If no data, remove old cache
+            os.remove(DATA_CACHE_PATH)
+
         # 2. Generate charts if data was found
         if not df_reports.empty:
             # Clear old charts to ensure a clean state
@@ -134,6 +142,28 @@ def index():
     else:
         region = '總計' if '總計' in regions else (regions[0] if regions else '')
 
+    base_number = request.args.get('base_number', 100, type=int)
+    latest_attendance = {}
+    average_attendance = {}
+
+    if os.path.exists(DATA_CACHE_PATH):
+        try:
+            df = pd.read_pickle(DATA_CACHE_PATH)
+            if region == '總計':
+                region_df = df
+            else:
+                region_df = df[df['大區'] == region]
+
+            if not region_df.empty:
+                ts = analysis.build_region_timeseries(region_df, region)
+                if not ts.empty:
+                    latest_data = ts.iloc[-1]
+                    latest_attendance = latest_data.to_dict()
+                    average_data = ts.mean()
+                    average_attendance = average_data.to_dict()
+        except Exception as e:
+            app.logger.error(f"Error reading or processing cache for rates: {e}")
+
     subdistricts = find_subdistricts_for_region(charts_dir, region)
     subdistrict_cards = build_subdistrict_cards(charts_dir, region, subdistricts)
 
@@ -148,6 +178,9 @@ def index():
         subdistrict_cards=subdistrict_cards,
         attendance_chart=attendance_chart,
         burden_chart=burden_chart,
+        base_number=base_number,
+        latest_attendance=latest_attendance,
+        average_attendance=average_attendance,
     )
 
 
@@ -178,6 +211,49 @@ def upload_files():
         messages.append('沒有上傳有效的檔案。請選擇副檔名為 ' + ", ".join(ALLOWED_EXTENSIONS) + ' 的檔案。')
         return jsonify({'status': 'error', 'messages': messages})
 
+
+@app.route('/calculate_rates')
+def calculate_rates():
+    """
+    Calculates attendance rates based on cached data and a base number.
+    This is a read-only endpoint that does not modify any data.
+    """
+    base_number = request.args.get('base_number', 100, type=int)
+    region = request.args.get('region', '總計', type=str)
+
+    if not os.path.exists(DATA_CACHE_PATH):
+        return jsonify({'status': 'error', 'message': '找不到彙整後的資料，請先執行分析。'}), 404
+
+    try:
+        df = pd.read_pickle(DATA_CACHE_PATH)
+        region_df = df if region == '總計' else df[df['大區'] == region]
+
+        if region_df.empty:
+            return jsonify({'status': 'success', 'rates': {}})
+
+        ts = analysis.build_region_timeseries(region_df, region)
+        if ts.empty:
+            return jsonify({'status': 'success', 'rates': {}})
+
+        latest_data = ts.iloc[-1].to_dict()
+        average_data = ts.mean().to_dict()
+
+        rates = {}
+        metrics = ['主日', '小排', '晨興', '禱告']
+
+        for metric in metrics:
+            latest_count = latest_data.get(metric, 0)
+            avg_count = average_data.get(metric, 0)
+            
+            # Apply custom formulas
+            formula = ((latest_count - base_number) / base_number * 100) if metric == '主日' else (latest_count / base_number * 100)
+            avg_formula = ((avg_count - base_number) / base_number * 100) if metric == '主日' else (avg_count / base_number * 100)
+
+            rates[metric] = {'latest_rate': formula if base_number > 0 else float('nan'), 'avg_rate': avg_formula if base_number > 0 else float('nan'), 'latest_count': latest_count, 'avg_count': avg_count}
+        return jsonify({'status': 'success', 'rates': rates})
+    except Exception as e:
+        app.logger.error(f"Error during rate calculation: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': f'計算時發生錯誤: {e}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
