@@ -1,8 +1,23 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
 import os
+import analysis
+import pandas as pd
 
 app = Flask(__name__)
 
+# --- Configuration ---
+# Folder to store uploaded report files
+UPLOAD_FOLDER = 'date'
+# Secret key for flashing messages (important for security)
+app.config['SECRET_KEY'] = 'your_super_secret_key_change_me'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+ALLOWED_EXTENSIONS = {'xls', 'xlsx'}
+
+@app.context_processor
+def inject_now():
+    """Injects a timestamp into templates for cache busting image assets."""
+    return {'now': pd.Timestamp.now().timestamp()}
 
 def get_regions_and_files(charts_dir: str):
     if not os.path.isdir(charts_dir):
@@ -58,12 +73,63 @@ def build_subdistrict_cards(charts_dir: str, region: str, subdistricts: list):
     return cards
 
 
+def allowed_file(filename):
+    """Checks if the file's extension is allowed."""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def run_analysis():
+    """
+    Runs the full analysis pipeline: aggregates reports from the UPLOAD_FOLDER
+    and generates all corresponding charts in the static/charts directory.
+    Returns a status message.
+    """
+    reports_dir = app.config['UPLOAD_FOLDER']
+    static_charts_dir = os.path.join(app.static_folder, 'charts')
+
+    try:
+        # 1. Aggregate data from all .xls* files
+        df_reports = analysis.aggregate_reports(reports_dir)
+
+        # 2. Generate charts if data was found
+        if not df_reports.empty:
+            # Clear old charts to ensure a clean state
+            if os.path.exists(static_charts_dir):
+                for f in os.listdir(static_charts_dir):
+                    if f.endswith('.png'):
+                        os.remove(os.path.join(static_charts_dir, f))
+            else:
+                os.makedirs(static_charts_dir, exist_ok=True)
+
+            # Generate '總計' (Total) chart
+            analysis.generate_region_charts(df_reports, "總計", static_charts_dir)
+
+            # Generate charts for each unique region found in the data
+            unique_regions = df_reports["大區"].dropna().unique()
+            for region in unique_regions:
+                if str(region) != "總計":
+                    analysis.generate_region_charts(df_reports, str(region), static_charts_dir)
+            return f"分析完成，共處理 {len(df_reports['週末日'].unique())} 週的資料。"
+        else:
+            return "找不到可分析的報告檔案。"
+
+    except Exception as e:
+        app.logger.error(f"An error occurred during analysis: {e}", exc_info=True)
+        return f"分析時發生錯誤: {e}"
+
+
 @app.route('/')
 def index():
     charts_dir = os.path.join(app.static_folder, 'charts')
+
+    # Ensure directories for uploads and charts exist
+    os.makedirs(charts_dir, exist_ok=True)
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
     regions, _ = get_regions_and_files(charts_dir)
     requested_region = request.args.get('region', '').strip()
-    if requested_region:
+    if requested_region and requested_region in regions:
         region = requested_region
     else:
         region = '總計' if '總計' in regions else (regions[0] if regions else '')
@@ -83,6 +149,34 @@ def index():
         attendance_chart=attendance_chart,
         burden_chart=burden_chart,
     )
+
+
+@app.route('/upload', methods=['POST'])
+def upload_files():
+    """Handles file uploads, triggers analysis, and returns JSON status."""
+    if 'files[]' not in request.files:
+        return jsonify({'status': 'error', 'messages': ['請求中找不到檔案部分。']})
+
+    files = request.files.getlist('files[]')
+    if not files or files[0].filename == '':
+        return jsonify({'status': 'error', 'messages': ['沒有選擇檔案。']})
+
+    uploaded_count = 0
+    for file in files:
+        if file and allowed_file(file.filename):
+            filename = file.filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            uploaded_count += 1
+
+    messages = []
+    if uploaded_count > 0:
+        messages.append(f'成功上傳 {uploaded_count} 個檔案。')
+        analysis_message = run_analysis()
+        messages.append(analysis_message)
+        return jsonify({'status': 'success', 'messages': messages})
+    else:
+        messages.append('沒有上傳有效的檔案。請選擇副檔名為 ' + ", ".join(ALLOWED_EXTENSIONS) + ' 的檔案。')
+        return jsonify({'status': 'error', 'messages': messages})
 
 
 if __name__ == '__main__':

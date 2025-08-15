@@ -36,6 +36,10 @@
       <h1>人數統計圖表</h1>
       <p>即時掌握各大區的召會生活人數與負擔領受程度</p>
     </div>
+
+    <!-- Container for dynamic alerts -->
+    <div id="alert-container" class="container px-0"></div>
+
     <form method="get" class="region-select">
       <label for="region" class="form-label fw-bold">選擇大區：</label>
       <select name="region" id="region" class="form-select" onchange="this.form.submit()">
@@ -44,14 +48,18 @@
         {% endfor %}
       </select>
     </form>
-
-    {% if subdistrict_cards %}
-      <div class="toolbar">
+    <div class="toolbar">
+      <!-- Upload Button -->
+      <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
+        上傳報表
+      </button>
+      <!-- Subdistrict Button (conditional) -->
+      {% if subdistrict_cards %}
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subdistrictModal">
           查看所有小區圖表
         </button>
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
 
     <div class="row g-4">
       <div class="col-md-6">
@@ -78,6 +86,32 @@
           {% else %}
             <div class="alert alert-info">目前沒有此大區的負擔圖表，請先執行分析腳本生成圖表。</div>
           {% endif %}
+        </div>
+      </div>
+    </div>
+    <!-- Modal: Upload -->
+    <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="uploadModalLabel">📤 上傳與分析報表</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted">選擇一個或多個報告檔案（.xls, .xlsx）進行上傳。分析將會自動執行。</p>
+            <form method="post" action="{{ url_for('upload_files') }}" enctype="multipart/form-data" id="upload-form">
+                <div class="mb-3">
+                  <input class="form-control" type="file" name="files[]" multiple="true" accept=".xls,.xlsx" required>
+                </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            <button form="upload-form" type="submit" class="btn btn-primary" id="upload-submit-btn">
+              <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+              <span class="button-text">上傳並分析</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -125,5 +159,66 @@
     <div class="footer">© 2025 教會人數統計 Dashboard</div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // --- AJAX File Upload Logic ---
+    const uploadForm = document.getElementById('upload-form');
+    const submitBtn = document.getElementById('upload-submit-btn');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    const buttonText = submitBtn.querySelector('.button-text');
+    const uploadModalEl = document.getElementById('uploadModal');
+    const uploadModal = bootstrap.Modal.getInstance(uploadModalEl) || new bootstrap.Modal(uploadModalEl);
+    const alertContainer = document.getElementById('alert-container');
+
+    function resetButton() {
+      submitBtn.disabled = false;
+      spinner.classList.add('d-none');
+      buttonText.textContent = '上傳並分析';
+    }
+
+    uploadForm.addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      // Show loading state
+      submitBtn.disabled = true;
+      spinner.classList.remove('d-none');
+      buttonText.textContent = '分析中...';
+      alertContainer.innerHTML = ''; // Clear previous alerts
+
+      const formData = new FormData(uploadForm);
+
+      fetch("{{ url_for('upload_files') }}", {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        const alertType = data.status === 'success' ? 'alert-success' : 'alert-danger';
+        const messagesHtml = data.messages.map(msg => `<div>${msg}</div>`).join('');
+        const alertHtml = `
+          <div class="alert ${alertType} alert-dismissible fade show mt-3" role="alert">
+            ${messagesHtml}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        `;
+        alertContainer.innerHTML = alertHtml;
+
+        if (data.status === 'success') {
+          uploadModal.hide();
+          // Reload the page after a delay to show the new charts
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          resetButton(); // Re-enable button on failure
+        }
+      })
+      .catch(error => {
+        console.error('Upload Error:', error);
+        alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">上傳失敗，發生未預期的錯誤。<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+        resetButton();
+      });
+    });
+
+    // Reset button if modal is closed manually during an upload
+    uploadModalEl.addEventListener('hidden.bs.modal', resetButton);
+  </script>
 </body>
 </html>
