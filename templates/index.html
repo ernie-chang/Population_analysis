@@ -42,7 +42,7 @@
 
     <form method="get" class="region-select">
       <label for="region" class="form-label fw-bold">選擇大區：</label>
-      <select name="region" id="region" class="form-select" onchange="this.form.submit()">
+      <select name="region" id="region" class="form-select">
         {% for r in regions %}
           <option value="{{ r }}" {% if r == region %}selected{% endif %}>{{ r }}</option>
         {% endfor %}
@@ -51,7 +51,7 @@
     <div class="toolbar">
       <!-- Upload Button -->
       <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
-        上傳報表
+        上傳與分析
       </button>
       <!-- Subdistrict Button (conditional) -->
       {% if subdistrict_cards %}
@@ -64,14 +64,14 @@
     <div class="row g-4">
       <div class="col-md-6">
         <div class="card p-4">
-          <h4 class="mb-3">👥 {{ region }} - 召會生活人數</h4>
+          <h4 class="mb-3" id="attendance-card-title">👥 {{ region }} - 召會生活人數</h4>
           {% if attendance_chart and attendance_chart|length > 0 %}
             {% if subdistrict_cards %}
               <a href="#" data-bs-toggle="modal" data-bs-target="#subdistrictModal" title="查看所有小區圖表">
-                <img src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
+                <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
               </a>
             {% else %}
-              <img src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
+              <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
             {% endif %}
           {% else %}
             <div class="alert alert-info">目前沒有此大區的出席圖表，請先執行分析腳本生成圖表。</div>
@@ -80,9 +80,9 @@
       </div>
       <div class="col-md-6">
         <div class="card p-4">
-          <h4 class="mb-3">💡 {{ region }} - 負擔領受程度</h4>
+          <h4 class="mb-3" id="burden-card-title">💡 {{ region }} - 負擔領受程度</h4>
           {% if burden_chart and burden_chart|length > 0 %}
-            <img src="{{ url_for('static', filename=burden_chart) }}" class="img-fluid rounded" alt="Burden Chart">
+            <img id="burden-chart-img" src="{{ url_for('static', filename=burden_chart) }}" class="img-fluid rounded" alt="Burden Chart">
           {% else %}
             <div class="alert alert-info">目前沒有此大區的負擔圖表，請先執行分析腳本生成圖表。</div>
           {% endif %}
@@ -98,7 +98,7 @@
             <input type="number" class="form-control form-control-lg text-center" id="base_number_input" value="{{ base_number }}" min="1" style="max-width: 150px;">
             <button class="btn btn-primary" id="calculate-rates-btn">
               <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-              <span class="button-text">計算比率</span>
+              <span class="button-text">儲存並計算</span>
             </button>
           </div>
           <div id="rate-display" class="row gy-4">
@@ -282,13 +282,21 @@
     document.addEventListener('DOMContentLoaded', function() {
       const calculateBtn = document.getElementById('calculate-rates-btn');
       if (!calculateBtn) return;
-
+      
       const baseNumberInput = document.getElementById('base_number_input');
       const regionSelect = document.getElementById('region');
       const alertContainer = document.getElementById('alert-container');
 
       const btnSpinner = calculateBtn.querySelector('.spinner-border');
       const btnText = calculateBtn.querySelector('.button-text');
+
+      function loadBaseNumberForRegion(region) {
+        const storageKey = `baseNumber_${region}`;
+        const savedBaseNumber = localStorage.getItem(storageKey);
+        if (savedBaseNumber) {
+          baseNumberInput.value = savedBaseNumber;
+        }
+      }
 
       async function updateRates() {
         const baseNumber = baseNumberInput.value;
@@ -297,6 +305,9 @@
         calculateBtn.disabled = true;
         btnSpinner.classList.remove('d-none');
         btnText.textContent = '計算中...';
+
+        // --- Save base number to localStorage ---
+        localStorage.setItem(`baseNumber_${region}`, baseNumber);
 
         try {
           const response = await fetch(`/calculate_rates?base_number=${baseNumber}&region=${region}`);
@@ -339,7 +350,81 @@
         } finally {
           calculateBtn.disabled = false;
           btnSpinner.classList.add('d-none');
-          btnText.textContent = '計算比率';
+          btnText.textContent = '儲存並計算';
+        }
+      }
+
+      // --- AJAX Region Switching ---
+      const attendanceChartImg = document.getElementById('attendance-chart-img');
+      const burdenChartImg = document.getElementById('burden-chart-img');
+      const subdistrictModalBtn = document.querySelector('button[data-bs-target="#subdistrictModal"]');
+      const subdistrictModalBody = document.querySelector('#subdistrictModal .modal-body');
+      const subdistrictModalTitle = document.getElementById('subdistrictModalLabel');
+      const attendanceCardTitle = document.getElementById('attendance-card-title');
+      const burdenCardTitle = document.getElementById('burden-card-title');
+
+      function updateChart(imgElement, url) {
+        const card = imgElement.closest('.card');
+        const alert = card.querySelector('.alert');
+        if (url) {
+          imgElement.src = url;
+          imgElement.style.display = 'block';
+          if (alert) alert.remove();
+        } else {
+          imgElement.style.display = 'none';
+          if (!alert) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-info';
+            alertDiv.textContent = '目前沒有此大區的圖表，請先執行分析腳本生成圖表。';
+            imgElement.parentElement.appendChild(alertDiv);
+          }
+        }
+      }
+
+      async function switchRegion(region) {
+        try {
+          const response = await fetch(`/region_data?region=${region}`);
+          const data = await response.json();
+
+          attendanceCardTitle.textContent = `👥 ${data.region} - 召會生活人數`;
+          burdenCardTitle.textContent = `💡 ${data.region} - 負擔領受程度`;
+
+          updateChart(attendanceChartImg, data.attendance_chart_url);
+          updateChart(burdenChartImg, data.burden_chart_url);
+
+          if (subdistrictModalBtn) {
+            subdistrictModalBtn.style.display = data.subdistrict_cards.length > 0 ? 'block' : 'none';
+          }
+          if (subdistrictModalBody && subdistrictModalTitle) {
+            subdistrictModalTitle.textContent = `${data.region} - 所有小區圖表`;
+            let modalHtml = '<div class="row g-4">';
+            data.subdistrict_cards.forEach(c => {
+              modalHtml += `
+                <div class="col-lg-6">
+                  <div class="card p-3">
+                    <h6 class="mb-2">📍 ${c.name}</h6>
+                    <div class="small text-secondary">召會生活人數</div>
+                    ${c.has_attendance ? `<img src="${c.attendance_chart}" class="img-fluid rounded mb-2" alt="${c.name} Attendance">` : '<div class="alert alert-light border">尚無出席圖表</div>'}
+                    <div class="small text-secondary">負擔領受程度</div>
+                    ${c.has_burden ? `<img src="${c.burden_chart}" class="img-fluid rounded" alt="${c.name} Burden">` : '<div class="alert alert-light border">尚無負擔圖表</div>'}
+                  </div>
+                </div>
+              `;
+            });
+            modalHtml += '</div>';
+            subdistrictModalBody.innerHTML = modalHtml;
+          }
+
+          const url = new URL(window.location);
+          url.searchParams.set('region', region);
+          history.pushState({}, '', url);
+
+          loadBaseNumberForRegion(region);
+          updateRates();
+
+        } catch (error) {
+          console.error('Error switching region:', error);
+          alertContainer.innerHTML = '<div class="alert alert-danger">切換區域時發生錯誤。</div>';
         }
       }
 
@@ -352,7 +437,12 @@
         }
       });
 
+      regionSelect.addEventListener('change', (event) => {
+        switchRegion(event.target.value);
+      });
+
       // Initial calculation on page load
+      loadBaseNumberForRegion(regionSelect.value);
       updateRates();
     });
   </script>

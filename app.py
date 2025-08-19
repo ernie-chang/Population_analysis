@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
 import os
+from werkzeug.utils import secure_filename
 import analysis
 import pandas as pd
 
@@ -10,7 +11,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'date'
 DATA_CACHE_PATH = os.path.join(UPLOAD_FOLDER, 'aggregated_data.pkl')
 # Secret key for flashing messages (important for security)
-app.config['SECRET_KEY'] = 'your_super_secret_key_change_me'
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'a-default-secret-key-for-development-only')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 ALLOWED_EXTENSIONS = {'xls', 'xlsx'}
@@ -197,7 +198,7 @@ def upload_files():
     uploaded_count = 0
     for file in files:
         if file and allowed_file(file.filename):
-            filename = file.filename
+            filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             uploaded_count += 1
 
@@ -211,6 +212,36 @@ def upload_files():
         messages.append('沒有上傳有效的檔案。請選擇副檔名為 ' + ", ".join(ALLOWED_EXTENSIONS) + ' 的檔案。')
         return jsonify({'status': 'error', 'messages': messages})
 
+
+@app.route('/region_data')
+def region_data():
+    """Provides chart and rate data for a specific region as JSON."""
+    region = request.args.get('region', '總計', type=str)
+    charts_dir = os.path.join(app.static_folder, 'charts')
+
+    # Chart paths
+    attendance_chart_path = f'charts/{region}_attendance.png'
+    burden_chart_path = f'charts/{region}_burden.png'
+
+    # Check if charts exist
+    has_attendance_chart = os.path.exists(os.path.join(app.static_folder, attendance_chart_path))
+    has_burden_chart = os.path.exists(os.path.join(app.static_folder, burden_chart_path))
+
+    # Find subdistricts and build cards
+    subdistricts = find_subdistricts_for_region(charts_dir, region)
+    subdistrict_cards = build_subdistrict_cards(charts_dir, region, subdistricts)
+
+    # Generate full URLs for the frontend
+    for card in subdistrict_cards:
+        card['attendance_chart'] = url_for('static', filename=card['attendance_chart'])
+        card['burden_chart'] = url_for('static', filename=card['burden_chart'])
+
+    return jsonify({
+        'region': region,
+        'attendance_chart_url': url_for('static', filename=attendance_chart_path) if has_attendance_chart else None,
+        'burden_chart_url': url_for('static', filename=burden_chart_path) if has_burden_chart else None,
+        'subdistrict_cards': subdistrict_cards,
+    })
 
 @app.route('/calculate_rates')
 def calculate_rates():
