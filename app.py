@@ -198,8 +198,8 @@ def upload_files():
     uploaded_count = 0
     for file in files:
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            # filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
             uploaded_count += 1
 
     messages = []

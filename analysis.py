@@ -201,6 +201,8 @@ def _annotate_series(ax, x_index: pd.Index, y_series: pd.Series, fontsize: int =
 
 
 def plot_attendance(region_name: str, ts: pd.DataFrame, output_dir: str) -> None:
+    # Only keep the last 5 weeks for plotting
+    ts = ts.tail(5)
     plt.figure(figsize=(10, 6))
     ax = plt.gca()
 
@@ -238,6 +240,8 @@ def plot_attendance(region_name: str, ts: pd.DataFrame, output_dir: str) -> None
 
 
 def plot_burden(region_name: str, ts: pd.DataFrame, output_dir: str) -> None:
+    # Only keep the last 5 weeks for plotting
+    ts = ts.tail(5)
     plt.figure(figsize=(10, 6))
     ax = plt.gca()
 
@@ -275,6 +279,8 @@ def plot_burden(region_name: str, ts: pd.DataFrame, output_dir: str) -> None:
 
 
 def plot_subdistrict_attendance(region_name: str, subdistrict_name: str, ts: pd.DataFrame, output_dir: str) -> None:
+    # Only keep the last 5 weeks for plotting
+    ts = ts.tail(5)
     plt.figure(figsize=(10, 6))
     ax = plt.gca()
 
@@ -312,6 +318,8 @@ def plot_subdistrict_attendance(region_name: str, subdistrict_name: str, ts: pd.
 
 
 def plot_subdistrict_burden(region_name: str, subdistrict_name: str, ts: pd.DataFrame, output_dir: str) -> None:
+    # Only keep the last 5 weeks for plotting
+    ts = ts.tail(5)
     plt.figure(figsize=(10, 6))
     ax = plt.gca()
 
