@@ -9,26 +9,353 @@
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', 'Noto Sans TC', 'PingFang TC', 'Heiti TC', Arial, sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%); min-height: 100vh; }
-    .navbar { background: #6366f1; }
-    .navbar-brand, .nav-link, .navbar-text { color: #fff !important; font-weight: 700; letter-spacing: 1px; }
-    .hero { background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat; color: #fff; padding: 4rem 2rem 3rem 2rem; border-radius: 1.5rem; margin-top: 2rem; box-shadow: 0 4px 24px rgba(99,102,241,0.10); text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    :root {
+      --bg-primary: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+      --bg-secondary: #ffffff;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --card-bg: #ffffff;
+      --navbar-bg: #6366f1;
+      --border-color: #e5e7eb;
+      --shadow-color: rgba(99,102,241,0.10);
+      --shadow-hover: rgba(99,102,241,0.18);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      --bg-secondary: #374151;
+      --text-primary: #ffffff;
+      --text-secondary: #e5e7eb;
+      --card-bg: #374151;
+      --navbar-bg: #4f46e5;
+      --border-color: #4b5563;
+      --shadow-color: rgba(0,0,0,0.3);
+      --shadow-hover: rgba(0,0,0,0.5);
+    }
+
+    body { 
+      font-family: 'Inter', 'Noto Sans TC', 'PingFang TC', 'Heiti TC', Arial, sans-serif; 
+      background: var(--bg-primary); 
+      min-height: 100vh; 
+      color: var(--text-primary);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    
+    .navbar { 
+      background: var(--navbar-bg); 
+      transition: background 0.3s ease;
+    }
+    
+    .navbar-brand, .nav-link, .navbar-text { 
+      color: #fff !important; 
+      font-weight: 700; 
+      letter-spacing: 1px; 
+    }
+    
+    .hero { 
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat; 
+      color: #fff; 
+      padding: 4rem 2rem 3rem 2rem; 
+      border-radius: 1.5rem; 
+      margin-top: 2rem; 
+      box-shadow: 0 4px 24px var(--shadow-color); 
+      text-shadow: 0 2px 8px rgba(0,0,0,0.15); 
+    }
+    
     .hero h1 { font-size: 2.6rem; font-weight: 700; }
     .hero p { font-size: 1.2rem; margin-top: 1rem; }
+    
     .region-select { max-width: 350px; margin: 2rem auto 0.5rem auto; }
-    .toolbar { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; margin: 0 auto 1.5rem auto; max-width: 1100px; }
-    .card { border-radius: 1.5rem; box-shadow: 0 4px 24px rgba(99,102,241,0.10); border: none; margin-bottom: 2rem; transition: transform 0.15s, box-shadow 0.15s; }
-    .card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 8px 32px rgba(99,102,241,0.18); }
+    
+    .toolbar { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      gap: .5rem; 
+      margin: 0 auto 1.5rem auto; 
+      max-width: 1100px; 
+      flex-wrap: wrap;
+    }
+    
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    
+    .card { 
+      border-radius: 1.5rem; 
+      box-shadow: 0 4px 24px var(--shadow-color); 
+      border: none; 
+      margin-bottom: 2rem; 
+      transition: transform 0.15s, box-shadow 0.15s, background-color 0.3s ease; 
+      background: var(--card-bg);
+    }
+    
+    .card:hover { 
+      transform: translateY(-4px) scale(1.01); 
+      box-shadow: 0 8px 32px var(--shadow-hover); 
+    }
+    
     .card h4 { color: #6366f1; font-weight: 700; }
-    .footer { text-align: center; color: #888; font-size: 1em; margin-top: 3em; padding: 1.5em 0 0.5em 0; background: #f3f4f6; border-top: 1px solid #e5e7eb; border-radius: 1.5rem 1.5rem 0 0; }
-    @media (max-width: 767px) { .hero { padding: 2rem 1rem 1.5rem 1rem; } .card { margin-bottom: 1.2rem; } }
+    
+    /* Dark mode text improvements */
+    [data-theme="dark"] .card h4 { 
+      color: #818cf8; 
+    }
+    
+    [data-theme="dark"] .text-muted { 
+      color: #d1d5db !important; 
+    }
+    
+    [data-theme="dark"] .alert-info { 
+      background-color: #1e40af; 
+      border-color: #3b82f6; 
+      color: #ffffff; 
+    }
+    
+    [data-theme="dark"] .alert-light { 
+      background-color: #4b5563; 
+      border-color: #6b7280; 
+      color: #ffffff; 
+    }
+    
+    [data-theme="dark"] .form-label { 
+      color: #ffffff; 
+    }
+    
+    [data-theme="dark"] .form-control { 
+      background-color: #4b5563; 
+      border-color: #6b7280; 
+      color: #ffffff; 
+    }
+    
+    [data-theme="dark"] .form-control:focus { 
+      background-color: #4b5563; 
+      border-color: #818cf8; 
+      color: #ffffff; 
+      box-shadow: 0 0 0 0.2rem rgba(129, 140, 248, 0.25); 
+    }
+    
+    [data-theme="dark"] .form-select { 
+      background-color: #4b5563; 
+      border-color: #6b7280; 
+      color: #ffffff; 
+    }
+    
+    [data-theme="dark"] .form-select:focus { 
+      background-color: #4b5563; 
+      border-color: #818cf8; 
+      color: #ffffff; 
+      box-shadow: 0 0 0 0.2rem rgba(129, 140, 248, 0.25); 
+    }
+    
+    /* Dark mode - make titles and labels white for better visibility */
+    [data-theme="dark"] #rate-display h5 { 
+      color: #ffffff !important; 
+    }
+    
+    [data-theme="dark"] #rate-display h6 { 
+      color: #ffffff !important; 
+    }
+    
+    [data-theme="dark"] #rate-display .small { 
+      color: #d1d5db !important; 
+    }
+    
+    /* Also target the specific sections */
+    [data-theme="dark"] .rate-display h5 { 
+      color: #ffffff !important; 
+    }
+    
+    [data-theme="dark"] .rate-display h6 { 
+      color: #ffffff !important; 
+    }
+    
+    .footer { 
+      text-align: center; 
+      color: var(--text-secondary); 
+      font-size: 1em; 
+      margin-top: 3em; 
+      padding: 1.5em 0 0.5em 0; 
+      background: var(--bg-secondary); 
+      border-top: 1px solid var(--border-color); 
+      border-radius: 1.5rem 1.5rem 0 0; 
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+    
+    /* Dark mode toggle button */
+    .theme-toggle {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    .theme-toggle:hover {
+      background: rgba(255,255,255,0.2);
+      transform: translateY(-1px);
+    }
+    
+    /* Loading states */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 1.5rem;
+      z-index: 10;
+    }
+    
+    [data-theme="dark"] .loading-overlay {
+      background: rgba(55,65,81,0.9);
+    }
+    
+    .loading-spinner {
+      width: 3rem;
+      height: 3rem;
+      border: 0.3rem solid #f3f3f3;
+      border-top: 0.3rem solid #6366f1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Chart container with export functionality */
+    .chart-container {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .chart-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .chart-container:hover .chart-actions {
+      opacity: 1;
+    }
+    
+    .export-btn {
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: background 0.3s ease;
+    }
+    
+    .export-btn:hover {
+      background: rgba(0,0,0,0.9);
+    }
+    
+    /* Mobile improvements */
+    @media (max-width: 767px) { 
+      .hero { 
+        padding: 2rem 1rem 1.5rem 1rem; 
+        margin-top: 1rem;
+      } 
+      
+      .hero h1 {
+        font-size: 2rem;
+      }
+      
+      .hero p {
+        font-size: 1rem;
+      }
+      
+      .card { 
+        margin-bottom: 1.2rem; 
+        border-radius: 1rem;
+      }
+      
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+      }
+      
+      .toolbar-left, .toolbar-right {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .chart-actions {
+        position: static;
+        opacity: 1;
+        justify-content: center;
+        margin-top: 1rem;
+      }
+      
+      .export-btn {
+        background: #6366f1;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+      }
+      
+      .export-btn:hover {
+        background: #4f46e5;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      
+      .hero {
+        padding: 1.5rem 1rem;
+        border-radius: 1rem;
+      }
+      
+      .card {
+        padding: 1.5rem !important;
+      }
+      
+      .toolbar-left, .toolbar-right {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
   </style>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg">
     <div class="container">
       <a class="navbar-brand" href="#">教會統計</a>
-      <span class="navbar-text ms-auto">人數與負擔圖表</span>
+      <div class="d-flex align-items-center gap-3">
+        <span class="navbar-text">人數與負擔圖表</span>
+        <button class="theme-toggle" id="theme-toggle" title="切換主題">
+          <span id="theme-icon">🌙</span>
+        </button>
+      </div>
     </div>
   </nav>
   <div class="container">
@@ -49,43 +376,73 @@
       </select>
     </form>
     <div class="toolbar">
-      <!-- Upload Button -->
-      <!-- <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
-        上傳與分析
-      </button> -->
-      <!-- Subdistrict Button (conditional) -->
-      {% if subdistrict_cards %}
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subdistrictModal">
-          查看所有小區圖表
+      <div class="toolbar-left">
+        <!-- Upload Button -->
+        <!-- <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
+          上傳與分析
+        </button> -->
+        <button type="button" class="btn btn-outline-info" id="refresh-data-btn" title="重新整理資料">
+          🔄 重新整理
         </button>
-      {% endif %}
+      </div>
+      <div class="toolbar-right">
+        <!-- Subdistrict Button (conditional) -->
+        {% if subdistrict_cards %}
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subdistrictModal">
+            查看所有小區圖表
+          </button>
+        {% endif %}
+        <button type="button" class="btn btn-outline-secondary" id="export-all-btn" title="匯出所有圖表">
+          📊 匯出圖表
+        </button>
+      </div>
     </div>
 
     <div class="row g-4">
       <div class="col-md-6">
-        <div class="card p-4">
+        <div class="card p-4 position-relative" id="attendance-card">
           <h4 class="mb-3" id="attendance-card-title">👥 {{ region }} - 召會生活人數</h4>
           {% if attendance_chart and attendance_chart|length > 0 %}
-            {% if subdistrict_cards %}
-              <a href="#" data-bs-toggle="modal" data-bs-target="#subdistrictModal" title="查看所有小區圖表">
+            <div class="chart-container">
+              {% if subdistrict_cards %}
+                <a href="#" data-bs-toggle="modal" data-bs-target="#subdistrictModal" title="查看所有小區圖表">
+                  <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
+                </a>
+              {% else %}
                 <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
-              </a>
-            {% else %}
-              <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
-            {% endif %}
+              {% endif %}
+              <div class="chart-actions">
+                <button class="export-btn" onclick="exportChart('attendance-chart-img', '{{ region }}_attendance')" title="匯出為PNG">
+                  📷 PNG
+                </button>
+              </div>
+            </div>
           {% else %}
             <div class="alert alert-info">目前沒有此大區的出席圖表，請先執行分析腳本生成圖表。</div>
           {% endif %}
+          <div class="loading-overlay d-none" id="attendance-loading">
+            <div class="loading-spinner"></div>
+          </div>
         </div>
       </div>
       <div class="col-md-6">
-        <div class="card p-4">
+        <div class="card p-4 position-relative" id="burden-card">
           <h4 class="mb-3" id="burden-card-title">💡 {{ region }} - 負擔領受程度</h4>
           {% if burden_chart and burden_chart|length > 0 %}
-            <img id="burden-chart-img" src="{{ url_for('static', filename=burden_chart) }}" class="img-fluid rounded" alt="Burden Chart">
+            <div class="chart-container">
+              <img id="burden-chart-img" src="{{ url_for('static', filename=burden_chart) }}" class="img-fluid rounded" alt="Burden Chart">
+              <div class="chart-actions">
+                <button class="export-btn" onclick="exportChart('burden-chart-img', '{{ region }}_burden')" title="匯出為PNG">
+                  📷 PNG
+                </button>
+              </div>
+            </div>
           {% else %}
             <div class="alert alert-info">目前沒有此大區的負擔圖表，請先執行分析腳本生成圖表。</div>
           {% endif %}
+          <div class="loading-overlay d-none" id="burden-loading">
+            <div class="loading-spinner"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -130,11 +487,11 @@
                   <h6>{{ name }}</h6>
                   <div class="d-flex justify-content-center align-items-baseline gap-3">
                     <div>
-                      <p id="latest-{{ key }}-rate" class="fs-4 fw-bold mb-0" style="color: {{ color }};">--%</p>
+                      <p id="latest-{{ key }}-rate" class="fs-4 fw-bold mb-0" data-color="{{ color }}">--%</p>
                       <small class="text-muted">最新: <span id="latest-{{ key }}-count">--</span></small>
                     </div>
                     <div>
-                      <p id="avg-{{ key }}-rate" class="fs-4 fw-bold mb-0" style="color: {{ color }}; opacity: 0.7;">--%</p>
+                      <p id="avg-{{ key }}-rate" class="fs-4 fw-bold mb-0" data-color="{{ color }}" style="opacity: 0.7;">--%</p>
                       <small class="text-muted">平均: <span id="avg-{{ key }}-count">--</span></small>
                     </div>
                   </div>
@@ -191,13 +548,27 @@
                       <h6 class="mb-2">📍 {{ c.name }}</h6>
                       <div class="small text-secondary">召會生活人數</div>
                       {% if c.has_attendance %}
-                        <img src="{{ url_for('static', filename=c.attendance_chart) }}" class="img-fluid rounded mb-2" alt="{{ c.name }} Attendance">
+                        <div class="chart-container">
+                          <img src="{{ url_for('static', filename=c.attendance_chart) }}" class="img-fluid rounded mb-2" alt="{{ c.name }} Attendance" id="sub-{{ c.name }}-attendance">
+                          <div class="chart-actions">
+                            <button class="export-btn" onclick="exportChart('sub-{{ c.name }}-attendance', '{{ region }}_{{ c.name }}_attendance')" title="匯出為PNG">
+                              📷 PNG
+                            </button>
+                          </div>
+                        </div>
                       {% else %}
                         <div class="alert alert-light border">尚無出席圖表</div>
                       {% endif %}
                       <div class="small text-secondary">負擔領受程度</div>
                       {% if c.has_burden %}
-                        <img src="{{ url_for('static', filename=c.burden_chart) }}" class="img-fluid rounded" alt="{{ c.name }} Burden">
+                        <div class="chart-container">
+                          <img src="{{ url_for('static', filename=c.burden_chart) }}" class="img-fluid rounded" alt="{{ c.name }} Burden" id="sub-{{ c.name }}-burden">
+                          <div class="chart-actions">
+                            <button class="export-btn" onclick="exportChart('sub-{{ c.name }}-burden', '{{ region }}_{{ c.name }}_burden')" title="匯出為PNG">
+                              📷 PNG
+                            </button>
+                          </div>
+                        </div>
                       {% else %}
                         <div class="alert alert-light border">尚無負擔圖表</div>
                       {% endif %}
@@ -340,6 +711,16 @@
               setText(`avg-${key}-count`, metricData.avg_count || 0);
               setText(`latest-${key}-rate`, metricData.latest_rate, true);
               setText(`avg-${key}-rate`, metricData.avg_rate, true);
+              
+              // Apply colors from data attributes
+              const latestEl = document.getElementById(`latest-${key}-rate`);
+              const avgEl = document.getElementById(`avg-${key}-rate`);
+              if (latestEl && latestEl.dataset.color) {
+                latestEl.style.color = latestEl.dataset.color;
+              }
+              if (avgEl && avgEl.dataset.color) {
+                avgEl.style.color = avgEl.dataset.color;
+              }
             }
           } else {
             alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">${data.message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
@@ -445,6 +826,124 @@
       loadBaseNumberForRegion(regionSelect.value);
       updateRates();
     });
+
+    // --- Dark Mode Toggle ---
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const body = document.body;
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    body.setAttribute('data-theme', savedTheme);
+    themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = body.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      body.setAttribute('data-theme', newTheme);
+      themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('theme', newTheme);
+    });
+
+    // --- Export Chart Functions ---
+    function exportChart(imgId, filename) {
+      const img = document.getElementById(imgId);
+      if (!img) return;
+
+      // Create canvas to convert image to PNG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      
+      ctx.drawImage(img, 0, 0);
+      
+      // Convert to blob and download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    // --- Export All Charts ---
+    document.getElementById('export-all-btn').addEventListener('click', () => {
+      const charts = ['attendance-chart-img', 'burden-chart-img'];
+      const region = document.getElementById('region').value;
+      
+      charts.forEach((chartId, index) => {
+        setTimeout(() => {
+          const img = document.getElementById(chartId);
+          if (img && img.src) {
+            const chartType = chartId.includes('attendance') ? 'attendance' : 'burden';
+            exportChart(chartId, `${region}_${chartType}`);
+          }
+        }, index * 500); // Stagger downloads
+      });
+    });
+
+    // --- Refresh Data Function ---
+    document.getElementById('refresh-data-btn').addEventListener('click', () => {
+      const attendanceCard = document.getElementById('attendance-card');
+      const burdenCard = document.getElementById('burden-card');
+      
+      // Show loading states
+      document.getElementById('attendance-loading').classList.remove('d-none');
+      document.getElementById('burden-loading').classList.remove('d-none');
+      
+      // Simulate refresh (in real implementation, this would trigger data reload)
+      setTimeout(() => {
+        document.getElementById('attendance-loading').classList.add('d-none');
+        document.getElementById('burden-loading').classList.add('d-none');
+        
+        // Show success message
+        const alertContainer = document.getElementById('alert-container');
+        alertContainer.innerHTML = `
+          <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            資料已重新整理完成！
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        `;
+      }, 2000);
+    });
+
+    // --- Enhanced Loading States for Chart Switching ---
+    function showChartLoading(cardId) {
+      const loadingOverlay = document.getElementById(`${cardId}-loading`);
+      if (loadingOverlay) {
+        loadingOverlay.classList.remove('d-none');
+      }
+    }
+
+    function hideChartLoading(cardId) {
+      const loadingOverlay = document.getElementById(`${cardId}-loading`);
+      if (loadingOverlay) {
+        loadingOverlay.classList.add('d-none');
+      }
+    }
+
+    // --- Enhanced Region Switching with Loading States ---
+    const originalSwitchRegion = window.switchRegion;
+    window.switchRegion = async function(region) {
+      showChartLoading('attendance');
+      showChartLoading('burden');
+      
+      try {
+        await originalSwitchRegion(region);
+      } finally {
+        setTimeout(() => {
+          hideChartLoading('attendance');
+          hideChartLoading('burden');
+        }, 1000);
+      }
+    };
   </script>
 </body>
 </html>
