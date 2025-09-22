@@ -778,15 +778,19 @@
       const btnSpinner = calculateBtn.querySelector('.spinner-border');
       const btnText = calculateBtn.querySelector('.button-text');
 
-      function loadBaseNumberForRegion(region) {
-        const storageKey = `baseNumber_${region}`;
-        const savedBaseNumber = localStorage.getItem(storageKey);
-        if (savedBaseNumber) {
-          baseNumberInput.value = savedBaseNumber;
+      async function loadBaseNumberForRegion(region) {
+        try {
+          const res = await fetch(`/base_numbers?region=${encodeURIComponent(region)}`);
+          const data = await res.json();
+          if (res.ok && typeof data.base_number === 'number') {
+            baseNumberInput.value = data.base_number;
+          }
+        } catch (e) {
+          console.error('Failed to load base number', e);
         }
       }
 
-      async function updateRates() {
+      async function updateRates(shouldSave = false) {
         const baseNumber = baseNumberInput.value;
         const region = regionSelect.value;
 
@@ -794,11 +798,21 @@
         btnSpinner.classList.remove('d-none');
         btnText.textContent = '計算中...';
 
-        // --- Save base number to localStorage ---
-        localStorage.setItem(`baseNumber_${region}`, baseNumber);
+        // --- Save base number to backend per-region only when requested ---
+        if (shouldSave) {
+          try {
+            await fetch('/base_numbers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ region, base_number: parseInt(baseNumber, 10) })
+            });
+          } catch (e) {
+            console.error('Failed to save base number', e);
+          }
+        }
 
         try {
-          const response = await fetch(`/calculate_rates?base_number=${baseNumber}&region=${region}`);
+          const response = await fetch(`/calculate_rates?region=${region}`);
           const data = await response.json();
 
           if (response.ok) {
@@ -917,8 +931,8 @@
           url.searchParams.set('region', region);
           history.pushState({}, '', url);
 
-          loadBaseNumberForRegion(region);
-          updateRates();
+          await loadBaseNumberForRegion(region);
+          await updateRates(false);
 
         } catch (error) {
           console.error('Error switching region:', error);
@@ -926,7 +940,7 @@
         }
       }
 
-      calculateBtn.addEventListener('click', updateRates);
+      calculateBtn.addEventListener('click', () => updateRates(true));
 
       baseNumberInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -940,8 +954,10 @@
       });
 
       // Initial calculation on page load
-      loadBaseNumberForRegion(regionSelect.value);
-      updateRates();
+      (async () => {
+        await loadBaseNumberForRegion(regionSelect.value);
+        await updateRates(false);
+      })();
     });
 
     // --- Dark Mode Toggle ---

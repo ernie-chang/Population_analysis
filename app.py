@@ -16,6 +16,35 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 ALLOWED_EXTENSIONS = {'xls', 'xlsx'}
 
+# --- Per-region base number persistence ---
+BASE_NUMBERS_JSON = os.path.join(UPLOAD_FOLDER, 'base_numbers.json')
+
+def load_base_numbers(default_value: int = 100) -> dict:
+    """Load per-region base numbers from JSON, return dict[str,int]."""
+    try:
+        if os.path.exists(BASE_NUMBERS_JSON):
+            import json
+            with open(BASE_NUMBERS_JSON, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                mapping = {}
+                for k, v in data.items():
+                    try:
+                        iv = int(v)
+                        mapping[str(k)] = iv if iv > 0 else default_value
+                    except Exception:
+                        mapping[str(k)] = default_value
+                return mapping
+    except Exception as e:
+        app.logger.error(f"Error loading base numbers: {e}")
+    return {}
+
+def save_base_numbers(mapping: dict) -> None:
+    """Persist per-region base numbers to JSON."""
+    import json
+    os.makedirs(os.path.dirname(BASE_NUMBERS_JSON), exist_ok=True)
+    with open(BASE_NUMBERS_JSON, 'w', encoding='utf-8') as f:
+        json.dump(mapping, f, ensure_ascii=False)
+
 @app.context_processor
 def inject_now():
     """Injects a timestamp into templates for cache busting image assets."""
@@ -143,7 +172,9 @@ def index():
     else:
         region = '總計' if '總計' in regions else (regions[0] if regions else '')
 
-    base_number = request.args.get('base_number', 100, type=int)
+    # Default base number uses stored per-region value
+    base_numbers = load_base_numbers(100)
+    base_number = base_numbers.get(region, request.args.get('base_number', 100, type=int))
     latest_attendance = {}
     average_attendance = {}
 
@@ -243,14 +274,53 @@ def region_data():
         'subdistrict_cards': subdistrict_cards,
     })
 
+@app.route('/base_numbers', methods=['GET', 'POST'])
+def base_numbers_api():
+    """Get or set per-region base numbers.
+    GET: optional ?region= to get single; otherwise returns mapping.
+    POST: JSON {region, base_number} or {base_numbers:{region:number,...}}
+    """
+    if request.method == 'GET':
+        region = request.args.get('region', None, type=str)
+        mapping = load_base_numbers(100)
+        if region:
+            return jsonify({'status': 'success', 'region': region, 'base_number': mapping.get(region, 100)})
+        return jsonify({'status': 'success', 'base_numbers': mapping})
+
+    payload = request.get_json(silent=True) or {}
+    mapping = load_base_numbers(100)
+    try:
+        if 'base_numbers' in payload and isinstance(payload['base_numbers'], dict):
+            updates = payload['base_numbers']
+            for k, v in updates.items():
+                iv = int(v)
+                if iv <= 0:
+                    raise ValueError('Base number must be positive')
+                mapping[str(k)] = iv
+        else:
+            region = payload.get('region')
+            value = int(payload.get('base_number'))
+            if not region or value <= 0:
+                raise ValueError('Invalid region or base number')
+            mapping[str(region)] = value
+        save_base_numbers(mapping)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        app.logger.error(f"Error saving base numbers: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': '儲存基數時發生錯誤。'}), 400
+
 @app.route('/calculate_rates')
 def calculate_rates():
     """
     Calculates attendance rates based on cached data and a base number.
     This is a read-only endpoint that does not modify any data.
     """
-    base_number = request.args.get('base_number', 100, type=int)
     region = request.args.get('region', '總計', type=str)
+    # Choose base number: explicit param overrides stored per-region value
+    if 'base_number' in request.args:
+        base_number = request.args.get('base_number', 100, type=int)
+    else:
+        base_number = load_base_numbers(100).get(region, 100)
 
     if not os.path.exists(DATA_CACHE_PATH):
         return jsonify({'status': 'error', 'message': '找不到彙整後的資料，請先執行分析。'}), 404
