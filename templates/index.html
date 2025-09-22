@@ -177,6 +177,27 @@
     [data-theme="dark"] .rate-display h6 { 
       color: #ffffff !important; 
     }
+
+    /* Dark mode for Customize Dashboard modal */
+    [data-theme="dark"] .modal-content {
+      background-color: #374151 !important;
+      color: #ffffff !important;
+    }
+
+    [data-theme="dark"] .modal-header {
+      border-bottom-color: #6b7280 !important;
+    }
+
+    [data-theme="dark"] .modal-footer {
+      border-top-color: #6b7280 !important;
+    }
+
+    [data-theme="dark"] .modal-title,
+    [data-theme="dark"] .modal-body h6,
+    [data-theme="dark"] .modal-body .form-label,
+    [data-theme="dark"] .modal-body .form-check-label {
+      color: #ffffff !important;
+    }
     
     .footer { 
       text-align: center; 
@@ -377,21 +398,24 @@
     </form>
     <div class="toolbar">
       <div class="toolbar-left">
-        <!-- Upload Button -->
-        <!-- <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
-          上傳與分析
-        </button> -->
+      <!-- Upload Button -->
+      <!-- <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
+        上傳與分析
+      </button> -->
         <button type="button" class="btn btn-outline-info" id="refresh-data-btn" title="重新整理資料">
           🔄 重新整理
         </button>
       </div>
       <div class="toolbar-right">
-        <!-- Subdistrict Button (conditional) -->
-        {% if subdistrict_cards %}
-          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subdistrictModal">
-            查看所有小區圖表
-          </button>
-        {% endif %}
+      <!-- Subdistrict Button (conditional) -->
+      {% if subdistrict_cards %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subdistrictModal">
+          查看所有小區圖表
+        </button>
+      {% endif %}
+        <button type="button" class="btn btn-outline-info" id="dashboard-customize-btn" title="自訂儀表板" data-bs-toggle="modal" data-bs-target="#dashboardCustomizeModal">
+          ⚙️ 自訂
+        </button>
         <button type="button" class="btn btn-outline-secondary" id="export-all-btn" title="匯出所有圖表">
           📊 匯出圖表
         </button>
@@ -401,16 +425,28 @@
     <div class="row g-4">
       <div class="col-md-6">
         <div class="card p-4 position-relative" id="attendance-card">
-          <h4 class="mb-3" id="attendance-card-title">👥 {{ region }} - 召會生活人數</h4>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0" id="attendance-card-title">👥 {{ region }} - 召會生活人數</h4>
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleComments('attendance')" title="新增備註">
+              💬
+            </button>
+          </div>
+          <div class="comments-section d-none" id="attendance-comments">
+            <div class="mb-2">
+              <textarea class="form-control form-control-sm" placeholder="新增備註..." id="attendance-comment-input"></textarea>
+              <button class="btn btn-sm btn-primary mt-1" onclick="addComment('attendance')">新增備註</button>
+            </div>
+            <div id="attendance-comments-list"></div>
+          </div>
           {% if attendance_chart and attendance_chart|length > 0 %}
             <div class="chart-container">
-              {% if subdistrict_cards %}
-                <a href="#" data-bs-toggle="modal" data-bs-target="#subdistrictModal" title="查看所有小區圖表">
-                  <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
-                </a>
-              {% else %}
+            {% if subdistrict_cards %}
+              <a href="#" data-bs-toggle="modal" data-bs-target="#subdistrictModal" title="查看所有小區圖表">
                 <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
-              {% endif %}
+              </a>
+            {% else %}
+              <img id="attendance-chart-img" src="{{ url_for('static', filename=attendance_chart) }}" class="img-fluid rounded" alt="Attendance Chart">
+            {% endif %}
               <div class="chart-actions">
                 <button class="export-btn" onclick="exportChart('attendance-chart-img', '{{ region }}_attendance')" title="匯出為PNG">
                   📷 PNG
@@ -427,10 +463,22 @@
       </div>
       <div class="col-md-6">
         <div class="card p-4 position-relative" id="burden-card">
-          <h4 class="mb-3" id="burden-card-title">💡 {{ region }} - 負擔領受程度</h4>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0" id="burden-card-title">💡 {{ region }} - 負擔領受程度</h4>
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleComments('burden')" title="新增備註">
+              💬
+            </button>
+          </div>
+          <div class="comments-section d-none" id="burden-comments">
+            <div class="mb-2">
+              <textarea class="form-control form-control-sm" placeholder="新增備註..." id="burden-comment-input"></textarea>
+              <button class="btn btn-sm btn-primary mt-1" onclick="addComment('burden')">新增備註</button>
+            </div>
+            <div id="burden-comments-list"></div>
+          </div>
           {% if burden_chart and burden_chart|length > 0 %}
             <div class="chart-container">
-              <img id="burden-chart-img" src="{{ url_for('static', filename=burden_chart) }}" class="img-fluid rounded" alt="Burden Chart">
+            <img id="burden-chart-img" src="{{ url_for('static', filename=burden_chart) }}" class="img-fluid rounded" alt="Burden Chart">
               <div class="chart-actions">
                 <button class="export-btn" onclick="exportChart('burden-chart-img', '{{ region }}_burden')" title="匯出為PNG">
                   📷 PNG
@@ -448,7 +496,7 @@
     </div>
     <!-- Rate Display Section -->
     <div class="row justify-content-center mt-3 g-4">
-      <div class="col-lg-10">
+      <div class="col-lg-10 mx-auto">
         <div class="card p-4">
           <div class="d-flex justify-content-center align-items-center gap-3 mb-4 flex-wrap">
             <label for="base_number_input" class="form-label mb-0 h5">基數:</label>
@@ -530,6 +578,75 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal: Dashboard Customization -->
+    <div class="modal fade" id="dashboardCustomizeModal" tabindex="-1" aria-labelledby="dashboardCustomizeModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="dashboardCustomizeModalLabel">⚙️ 自訂儀表板</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6>顯示的圖表：</h6>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-attendance" checked>
+                  <label class="form-check-label" for="show-attendance">
+                    👥 召會生活人數圖表
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-burden" checked>
+                  <label class="form-check-label" for="show-burden">
+                    💡 負擔領受程度圖表
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-rates" checked>
+                  <label class="form-check-label" for="show-rates">
+                    📊 比率統計區塊
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h6>顯示的指標：</h6>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-main" checked>
+                  <label class="form-check-label" for="show-main">
+                    🏠 主日
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-small-group" checked>
+                  <label class="form-check-label" for="show-small-group">
+                    👥 小排
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-morning" checked>
+                  <label class="form-check-label" for="show-morning">
+                    🌅 晨興
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-prayer" checked>
+                  <label class="form-check-label" for="show-prayer">
+                    🙏 禱告
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" onclick="applyDashboardCustomization()">套用設定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Modal: Subdistrict Charts -->
     {% if subdistrict_cards %}
@@ -944,6 +1061,218 @@
         }, 1000);
       }
     };
+
+    // --- Function 9: Customizable Dashboard ---
+    function applyDashboardCustomization() {
+      const showAttendance = document.getElementById('show-attendance').checked;
+      const showBurden = document.getElementById('show-burden').checked;
+      const showRates = document.getElementById('show-rates').checked;
+      const showMain = document.getElementById('show-main').checked;
+      const showSmallGroup = document.getElementById('show-small-group').checked;
+      const showMorning = document.getElementById('show-morning').checked;
+      const showPrayer = document.getElementById('show-prayer').checked;
+
+      // Toggle chart visibility
+      const attendanceCard = document.getElementById('attendance-card');
+      const burdenCard = document.getElementById('burden-card');
+      const ratesSection = document.querySelector('.row.justify-content-center.mt-3');
+
+      if (attendanceCard) {
+        attendanceCard.style.display = showAttendance ? 'block' : 'none';
+      }
+      if (burdenCard) {
+        burdenCard.style.display = showBurden ? 'block' : 'none';
+      }
+      if (ratesSection) {
+        ratesSection.style.display = showRates ? 'block' : 'none';
+      }
+
+      // Toggle specific metrics in the rates section
+      const metrics = [
+        { id: 'sabbath-growth-rate', show: showMain },
+        { id: 'latest-小排-rate', show: showSmallGroup },
+        { id: 'latest-晨興-rate', show: showMorning },
+        { id: 'latest-禱告-rate', show: showPrayer }
+      ];
+
+      metrics.forEach(metric => {
+        const element = document.getElementById(metric.id);
+        if (element) {
+          const parent = element.closest('.col-md-6, .col-lg-4');
+          if (parent) {
+            parent.style.display = metric.show ? 'block' : 'none';
+          }
+        }
+      });
+
+      // Save preferences to localStorage
+      const preferences = {
+        showAttendance, showBurden, showRates, showMain, showSmallGroup, showMorning, showPrayer
+      };
+      localStorage.setItem('dashboardPreferences', JSON.stringify(preferences));
+
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('dashboardCustomizeModal'));
+      modal.hide();
+
+      // Show success message
+      const alertContainer = document.getElementById('alert-container');
+      alertContainer.innerHTML = `
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+          儀表板自訂設定已套用！
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      `;
+    }
+
+    // Load saved dashboard preferences
+    function loadDashboardPreferences() {
+      const saved = localStorage.getItem('dashboardPreferences');
+      if (saved) {
+        const preferences = JSON.parse(saved);
+        
+        // Apply saved preferences
+        document.getElementById('show-attendance').checked = preferences.showAttendance;
+        document.getElementById('show-burden').checked = preferences.showBurden;
+        document.getElementById('show-rates').checked = preferences.showRates;
+        document.getElementById('show-main').checked = preferences.showMain;
+        document.getElementById('show-small-group').checked = preferences.showSmallGroup;
+        document.getElementById('show-morning').checked = preferences.showMorning;
+        document.getElementById('show-prayer').checked = preferences.showPrayer;
+
+        // Apply the settings
+        applyDashboardCustomization();
+      }
+    }
+
+
+
+    // --- Function 12: Comment System ---
+    function toggleComments(chartType) {
+      const commentsSection = document.getElementById(`${chartType}-comments`);
+      const commentCount = document.getElementById(`${chartType}-comment-count`);
+      
+      if (commentsSection.classList.contains('d-none')) {
+        commentsSection.classList.remove('d-none');
+        loadComments(chartType);
+      } else {
+        commentsSection.classList.add('d-none');
+      }
+    }
+
+    function addComment(chartType) {
+      const commentInput = document.getElementById(`${chartType}-comment-input`);
+      const comment = commentInput.value.trim();
+      
+      if (!comment) {
+        alert('請輸入備註內容');
+        return;
+      }
+
+      const commentData = {
+        text: comment,
+        timestamp: new Date().toLocaleString('zh-TW'),
+        chartType: chartType,
+        region: document.getElementById('region').value
+      };
+
+      // Save to localStorage
+      const comments = JSON.parse(localStorage.getItem('chartComments') || '{}');
+      const key = `${chartType}_${commentData.region}`;
+      if (!comments[key]) {
+        comments[key] = [];
+      }
+      comments[key].push(commentData);
+      localStorage.setItem('chartComments', JSON.stringify(comments));
+
+      // Clear input and reload comments
+      commentInput.value = '';
+      loadComments(chartType);
+      updateCommentCount(chartType);
+    }
+
+    function loadComments(chartType) {
+      const commentsList = document.getElementById(`${chartType}-comments-list`);
+      const region = document.getElementById('region').value;
+      const key = `${chartType}_${region}`;
+      
+      const comments = JSON.parse(localStorage.getItem('chartComments') || '{}');
+      const chartComments = comments[key] || [];
+
+      if (chartComments.length === 0) {
+        commentsList.innerHTML = '<div class="text-muted small">尚無備註</div>';
+      } else {
+        commentsList.innerHTML = chartComments.map((comment, index) => `
+          <div class="comment-item border-bottom pb-2 mb-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="comment-text">${comment.text}</div>
+              <div class="d-flex align-items-center gap-2">
+                <small class="text-muted">${comment.timestamp}</small>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteComment('${chartType}', ${index})" title="刪除備註">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function updateCommentCount(chartType) {
+      const region = document.getElementById('region').value;
+      const key = `${chartType}_${region}`;
+      const comments = JSON.parse(localStorage.getItem('chartComments') || '{}');
+      const chartComments = comments[key] || [];
+      
+      const countElement = document.getElementById(`${chartType}-comment-count`);
+      if (countElement) {
+        countElement.textContent = chartComments.length;
+      }
+    }
+
+    function deleteComment(chartType, commentIndex) {
+      const region = document.getElementById('region').value;
+      const key = `${chartType}_${region}`;
+      const comments = JSON.parse(localStorage.getItem('chartComments') || '{}');
+      
+      if (comments[key] && comments[key][commentIndex]) {
+        // Remove the comment at the specified index
+        comments[key].splice(commentIndex, 1);
+        localStorage.setItem('chartComments', JSON.stringify(comments));
+        
+        // Reload comments and update count
+        loadComments(chartType);
+        updateCommentCount(chartType);
+        
+        // Show success message
+        const alertContainer = document.getElementById('alert-container');
+        alertContainer.innerHTML = `
+          <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            備註已刪除！
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        `;
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadDashboardPreferences();
+      
+      // Update comment counts after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        updateCommentCount('attendance');
+        updateCommentCount('burden');
+      }, 100);
+    });
+
+    // Also update comment counts when region changes
+    document.getElementById('region').addEventListener('change', function() {
+      setTimeout(() => {
+        updateCommentCount('attendance');
+        updateCommentCount('burden');
+      }, 100);
+    });
   </script>
 </body>
 </html>
